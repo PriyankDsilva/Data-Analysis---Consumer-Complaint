@@ -2,7 +2,6 @@ import os,configparser
 
 def getParam():
 
-    os.chdir("C:\\Users\\Priyank\\Desktop\\MIS\\Scripting Languages\\DataAnalyst-Project(Python)\\Coding")
     WorkingDirectory=os.getcwd()
     ConfigFilePath=WorkingDirectory+"\\config.ini"
     settings = configparser.ConfigParser()

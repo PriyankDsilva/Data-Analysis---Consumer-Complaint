@@ -276,8 +276,8 @@ def main():
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
     # Image for SignUp Background
     photo = PhotoImage(file='ConsumerComplaint.png')
-    #SignUpFrame(root,photo)
-    MainPage(root, photo)
+    SignUpFrame(root,photo)
+    #MainPage(root, photo)
     root.mainloop()
 
 
