@@ -44,28 +44,8 @@ def InsertData(TableName,FileName):
             except:
                 RejectedRecords=RejectedRecords.append( {'Datereceived':DataFrame.iloc[i,0],'Product':DataFrame.iloc[i,1],'Subproduct':DataFrame.iloc[i,2],'Issue':DataFrame.iloc[i,3],'Subissue':DataFrame.iloc[i,4],'Consumercomplaintnarrative':DataFrame.iloc[i,5],'Companypublicresponse':DataFrame.iloc[i,6],'Company':DataFrame.iloc[i,7],'State':DataFrame.iloc[i,8],'ZIPcode':DataFrame.iloc[i,9],'Submittedvia':DataFrame.iloc[i,10],'Datesenttocompany':DataFrame.iloc[i,11],'Companyresponsetoconsumer':DataFrame.iloc[i,12],'Timelyresponse':DataFrame.iloc[i,13],'Consumerdisputed':DataFrame.iloc[i,14],'ComplaintID':DataFrame.iloc[i,15]}, ignore_index=True)
 
-
-    #for i in range(0,len(DataFrame)):
-    #    try:
-    #        cur.execute(fbIns, (DataFrame.iloc[i,0],DataFrame.iloc[i,1],DataFrame.iloc[i,2],DataFrame.iloc[i,3],DataFrame.iloc[i,4],DataFrame.iloc[i,5],DataFrame.iloc[i,6],DataFrame.iloc[i,7],DataFrame.iloc[i,8],DataFrame.iloc[i,9],DataFrame.iloc[i,10],DataFrame.iloc[i,11],DataFrame.iloc[i,12],DataFrame.iloc[i,13],DataFrame.iloc[i,14],DataFrame.iloc[i,15]))
-    #    except:
-    #        RejectedRecords=RejectedRecords.append( {'Datereceived':DataFrame.iloc[i,0],'Product':DataFrame.iloc[i,1],'Subproduct':DataFrame.iloc[i,2],'Issue':DataFrame.iloc[i,3],'Subissue':DataFrame.iloc[i,4],'Consumercomplaintnarrative':DataFrame.iloc[i,5],'Companypublicresponse':DataFrame.iloc[i,6],'Company':DataFrame.iloc[i,7],'State':DataFrame.iloc[i,8],'ZIPcode':DataFrame.iloc[i,9],'Submittedvia':DataFrame.iloc[i,10],'Datesenttocompany':DataFrame.iloc[i,11],'Companyresponsetoconsumer':DataFrame.iloc[i,12],'Timelyresponse':DataFrame.iloc[i,13],'Consumerdisputed':DataFrame.iloc[i,14],'ComplaintID':DataFrame.iloc[i,15]}, ignore_index=True)
-
-    #cur.executemany(fbIns, (DataFrame.iloc[:,0],DataFrame.iloc[:,1],DataFrame.iloc[:,2],DataFrame.iloc[:,3],DataFrame.iloc[:,4],DataFrame.iloc[:,5],DataFrame.iloc[:,6],DataFrame.iloc[:,7],DataFrame.iloc[:,8],DataFrame.iloc[:,9],DataFrame.iloc[:,10],DataFrame.iloc[:,11],DataFrame.iloc[:,12],DataFrame.iloc[:,13],DataFrame.iloc[:,14],DataFrame.iloc[:,15]))
-
-    #TotalRecords=[]
-    #TotalRecords=[(DataFrame,index=False)]
-    #for i in range(0,len(DataFrame)):
-        #RecordString=(DataFrame.iloc[i,0],DataFrame.iloc[i,1],DataFrame.iloc[i,2],DataFrame.iloc[i,3],DataFrame.iloc[i,4],DataFrame.iloc[i,5],DataFrame.iloc[i,6],DataFrame.iloc[i,7],DataFrame.iloc[i,8],DataFrame.iloc[i,9],DataFrame.iloc[i,10],DataFrame.iloc[i,11],DataFrame.iloc[i,12],DataFrame.iloc[i,13],DataFrame.iloc[i,14],DataFrame.iloc[i,15])
-        #TotalRecords.append(DataFrame.iloc[i,0],DataFrame.iloc[i,1],DataFrame.iloc[i,2],DataFrame.iloc[i,3],DataFrame.iloc[i,4],DataFrame.iloc[i,5],DataFrame.iloc[i,6],DataFrame.iloc[i,7],DataFrame.iloc[i,8],DataFrame.iloc[i,9],DataFrame.iloc[i,10],DataFrame.iloc[i,11],DataFrame.iloc[i,12],DataFrame.iloc[i,13],DataFrame.iloc[i,14],DataFrame.iloc[i,15])
-        #TotalRecords.append(RecordString)
-        #print(RecordString)
-    #TotalRecords=[(DataFrame.iloc[:,0],DataFrame.iloc[:,1],DataFrame.iloc[:,2],DataFrame.iloc[:,3],DataFrame.iloc[:,4],DataFrame.iloc[:,5],DataFrame.iloc[:,6],DataFrame.iloc[:,7],DataFrame.iloc[:,8],DataFrame.iloc[:,9],DataFrame.iloc[:,10],DataFrame.iloc[:,11],DataFrame.iloc[:,12],DataFrame.iloc[:,13],DataFrame.iloc[:,14],DataFrame.iloc[:,15])]
-    #print(DataFrame.values.tolist())
-    #cur.executemany(fbIns,DataFrame.values.tolist())
     con.commit()
     RejectedRecords.to_csv(RejectFile,index=False)
-
 
 #Function to Delete all Records from Table
 def DeleteData(TableName):
@@ -123,14 +103,17 @@ def ViewSwap(TableName,ViewName):
     cur = con.cursor()
     SQLComment="recreate view " + ViewName + " as select DateReceived,Product,SubProduct,Issue,SubIssue,ConsumerComplaint,CompanyPublicResponse,Company,State,ZIPCode,SubmittedVia,DateSentCompany,CompanyResponseConsumer,TimelyResponseSts,ConsumerDisputedSts,ComplaintID  from "+TableName
     fbSwap=cur.prep(SQLComment)
-    cur.execute(fbSwap)
+    try:
+        cur.execute(fbSwap)
+    except Exception as e:
+        con.commit()
+        raise Exception(e)
     con.commit()
 
 #Function to Create copy table and Swap Views
-def CloneTable(MainTable,CloneTable,ViewName):
+def CloneTable(MainTable,CloneTable):
     DeleteData(CloneTable)
     UpdateCopyTable(MainTable,CloneTable)
-    ViewSwap(CloneTable,ViewName)
 
 #Function to Get Load Index
 def GetLoadIndex(LogTable):
@@ -154,7 +137,6 @@ def GetRecordCount(TableName,FilterValue):
         RowCount=count[0]
     return RowCount
 
-
 #function to get Record Count of Main Table
 def GetMainRecordCount(TableName,StageTableName):
     global DBPath,UserName,Password
@@ -177,8 +159,6 @@ def GetTableCount(TableName):
         RowCount=count[0]
     return RowCount
 
-
-
 #Function to Update Log Table
 def UpdateLog(LogTable,LoadIndex,LoadOrder,APICode,FileName,RecordCount,LoadStartDTTM,LoadEndDTTM):
     global DBPath,UserName,Password
@@ -199,5 +179,3 @@ def UpdateMainLog(LogTable,LoadIndex,LoadOrder,LoadStep,StepName,Status,RecordCo
     cur.execute(fbLog, (LoadIndex,LoadOrder,LoadStep,StepName,Status,RecordCount,LoadStartDTTM,LoadEndDTTM))
     con.commit()
 
-
-#InsertData( 'consumercomplaint_staging' , 'Other financial services')

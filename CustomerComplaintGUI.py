@@ -18,8 +18,6 @@ CLOCK_FONT = ("Times", "15", "italic")
 # Program Info
 ABOUT_INFO = "In Progress !!!"
 
-
-
 def SignUpFrame(root, photo):
     # Set Title for the Sign Up Frame
     root.title('Consumer Complaint Analysis - Login')
@@ -63,7 +61,6 @@ def SignUpFrame(root, photo):
     status = Label(root, text='Consumer Complaint Analysis...', bd=1, relief=SUNKEN, anchor=E)
     status.pack(side=BOTTOM, fill=X)
 
-
 # Authenticate User and Login
 def Login(User, Password, menu, frame, image, lable, root, photo):
     if User == 'admin' and Password == 'admin':
@@ -74,8 +71,7 @@ def Login(User, Password, menu, frame, image, lable, root, photo):
         image.destroy()
         MainPage(root, photo)
     else:
-        popupmsg("Invalid User/Password !!!")
-
+        messagebox.showinfo("Error !!!", 'Invalid User/Password !!!')
 
 # Pop UP
 def popupmsg(msg):
@@ -86,7 +82,6 @@ def popupmsg(msg):
     B1 = ttk.Button(popup, text="Okay", command=popup.destroy)
     B1.pack()
     popup.mainloop()
-
 
 # Main Page of GUI
 def MainPage(root, photo):
@@ -102,10 +97,9 @@ def MainPage(root, photo):
 
     # Functions
     # Fetch/Update Data Button Function
+    ###################################Fetch Data Starts####################################################
     def FetchData(root, ImageFrame, ImageLabel, photo, MainPageFrame,FetchDataButton):
         #Start the Fetching Process
-
-
         InitialParameters = Initialize.getParam()
         LoadFileName = InitialParameters[15]
 
@@ -124,7 +118,7 @@ def MainPage(root, photo):
         def ScrollLogFunc(event):
             FetchCanvas.configure(scrollregion=FetchCanvas.bbox("all"),height=370,width=700)
 
-        #canvas to Implement Scroll Bar
+        #canvas to Implement Scroll Bar for Log
         FetchCanvas=Canvas(TopFetchFrame)
         CanvasFrame=Frame(FetchCanvas)
         ScrollLogY=Scrollbar(TopFetchFrame, orient="vertical",command=FetchCanvas.yview)
@@ -132,16 +126,13 @@ def MainPage(root, photo):
         FetchCanvas.pack(side=LEFT)
         ScrollLogY.pack(side=RIGHT,fill=Y)
         FetchCanvas.create_window((0,0),window=CanvasFrame,anchor=NW)
+
         #Label to display the Log Details
         LogContentDisplay=Label(CanvasFrame,text='Loading Log Details . . ..',anchor=NW,justify=LEFT,wraplength=650)
         CanvasFrame.bind("<Configure>",ScrollLogFunc)
         LogContentDisplay.pack()
-        #View Button to Get Details ....Removed as not required
-        #ViewButton = ttk.Button(BottopFetchFrame, text='View Log', width=20,command=lambda: DisplayLogContent(LogContentDisplay))
-        #ViewButton.pack(side=LEFT)
 
-
-        #Function to Fetch Log Details from Log File
+        #Function to Fetch Log Details from Log File - continuesly
         def DisplayLogContent():
             #global LogValue
             CurrentLogValue=''
@@ -150,24 +141,13 @@ def MainPage(root, photo):
             try:
                 LogFile = open(LogFileName, 'r')
             except Exception as e:
-                print('Log File in Use : ',e)
-                time.sleep(3)
-                count=0
-                while count!=3:
-                    try:
-                        LogFile = open(LogFileName, 'r')
-                        count=3
-                    except Exception as e2:
-                        print('Log File in Use : ',2)
-                        count+=1
-                        CurrentLogValue='Unable to Display Log.Please Wait . . .'
-                    else:
-                        CurrentLogValue = LogFile.read()
+                #print('Log File Error : ',e)
+                CurrentLogValue='Unable to Display Log.Please Wait . . .'
             else:
                         CurrentLogValue = LogFile.read()
             LogContentDisplay.config(text=CurrentLogValue)
             LogContentDisplay.after(200,DisplayLogContent)
-
+        #run the Fetch Log function
         DisplayLogContent()
 
         #Clear the Fetch Data Screen and revert to Default Main Page
@@ -177,21 +157,23 @@ def MainPage(root, photo):
             MainPage(root, photo)
 
         #Button to Clear the Screen and revert back
-        ClearButton = ttk.Button(BottopFetchFrame, text='Back', width=20,
+        BackButton = ttk.Button(BottopFetchFrame, text='Back', width=20,
                                  command=lambda: DisplayLogClear(root, photo, ImageFrame, MainPageFrame))
-        ClearButton.pack(side=LEFT,padx=50)
-
+        BackButton.pack(side=LEFT,padx=50)
 
         #Runthe Update Process using thread
+
         if os.path.isfile(LoadFileName) == True:
             popupmsg('Update Already in Progress !!!')
         else:
             Choice=messagebox.askquestion("Update", "Are You sure you want to update the Main DB Tables?", icon='warning')
             if Choice=='yes':
-                FDThread=threading.Thread(target=FD.main)
-                FDThread.start()
+                threading.Thread(target=FD.main).start()
             else:
                 DisplayLogClear(root, photo, ImageFrame, MainPageFrame)
+
+    ###################################Fetch Data Ended####################################################
+
 
     # Create Buttions to Perform Tasks
     FetchDataButton = ttk.Button(MainPageFrame, text='Fetch/Update Database', width=40,
@@ -206,7 +188,7 @@ def MainPage(root, photo):
     SpaceLabel3 = Label(MainPageFrame, text='', height=3)
     SpaceLabel4 = Label(MainPageFrame, text='', height=3)
 
-    ###Clock
+    #Clock
     clock = Label(MainPageFrame, font=CLOCK_FONT,anchor=W)
     clock.pack(side=TOP,fill=BOTH,expand=1)
 
@@ -218,9 +200,8 @@ def MainPage(root, photo):
             Timer = CurrTime
             clock.config(text=CurrTime)
         clock.after(200, tick)
-
+    #run Clock
     tick()
-
 
     # Display the Buttons on Main Page
     SpaceLabel0.pack()
@@ -233,9 +214,7 @@ def MainPage(root, photo):
     MainExitButton.pack()
     SpaceLabel4.pack()
 
-
-
-    # Status Bar
+    # Status Bar Functions
     def NormStatus(event):
         status.config(text='Consumer Complaint Analysis', anchor=NE)
 
@@ -257,10 +236,12 @@ def MainPage(root, photo):
         status.config(text='Exit the Consumer Complaint Analyst Program'
                       , anchor=NW, justify=LEFT, wraplength=280)
 
+    #status Bar Bottom
     status = Label(MainPageFrame, text='Consumer Complaint Analysis', bd=1, relief=SUNKEN, anchor=NE, height=4,
                    width=40)
     status.pack(side=BOTTOM, fill=X)
 
+    #Binding Status Functions
     FetchDataButton.bind('<Enter>', FetchStatus)
     FetchDataButton.bind('<Leave>', NormStatus)
     ViewLogButton.bind('<Enter>', ViewLogStatus)
@@ -270,15 +251,13 @@ def MainPage(root, photo):
     MainExitButton.bind('<Enter>', ExitStatus)
     MainExitButton.bind('<Leave>', NormStatus)
 
-
 def main():
     root = Tk()
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
-    # Image for SignUp Background
+    # Image for Consumer Complaint
     photo = PhotoImage(file='ConsumerComplaint.png')
     SignUpFrame(root,photo)
     #MainPage(root, photo)
     root.mainloop()
-
 
 main()
