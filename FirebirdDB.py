@@ -10,6 +10,8 @@ DBName=InitialParameters[6]
 UserName=InitialParameters[7]
 Password=InitialParameters[8]
 RejectFileName=InitialParameters[9]
+MainLogTable = InitialParameters[18]
+LogTableName=InitialParameters[13]
 
 DBPath=DBLocation+DBName
 
@@ -179,3 +181,50 @@ def UpdateMainLog(LogTable,LoadIndex,LoadOrder,LoadStep,StepName,Status,RecordCo
     cur.execute(fbLog, (LoadIndex,LoadOrder,LoadStep,StepName,Status,RecordCount,LoadStartDTTM,LoadEndDTTM))
     con.commit()
 
+
+def DisplayAPILog():
+    global DBPath,UserName,Password
+    con = fdb.connect(database=DBPath, user=UserName, password=Password)
+    cur = con.cursor()
+    SQLComment="SELECT LOADINDEX,LOADORDER,APICODE,FILENAME,RECORDCOUNT,CAST(LOADSTARTDTTM AS CHAR(24)) LOADSTARTDTTM,LOADENDDTTM,"\
+               + "DATEDIFF(SECOND FROM LOADSTARTDTTM TO LOADENDDTTM) AS DURATION FROM "+LogTableName
+    APILog=cur.prep(SQLComment)
+    cur.execute(APILog)
+    df=pd.DataFrame()
+    list=[]
+    for LOADINDEX,LOADORDER,APICODE,FILENAME,RECORDCOUNT,LOADSTARTDTTM,LOADENDDTTM,DURATION in cur:
+        df=df.append({'LoadIndex':LOADINDEX,
+                      'LoadOrder':LOADORDER,
+                      'APICode':APICODE,
+                      'FileName':FILENAME,
+                      'RecordCount':RECORDCOUNT,
+                      'LoadStartDTTM':LOADSTARTDTTM,
+                      'LoadEndDTTM':LOADENDDTTM,
+                      'Duration':DURATION
+                      },ignore_index=True)
+    con.commit()
+    return df[['LoadIndex','LoadOrder','APICode','FileName','RecordCount','LoadStartDTTM','LoadEndDTTM','Duration']]
+
+def DisplayLoadStepLog():
+    global DBPath,UserName,Password
+    con = fdb.connect(database=DBPath, user=UserName, password=Password)
+    cur = con.cursor()
+    SQLComment="SELECT LOADINDEX,LOADORDER,LOADSTEP,STEPNAME,STATUS,RECORDCOUNT,CAST(LOADSTARTDTTM AS CHAR(24)) LOADSTARTDTTM,LOADENDDTTM,"\
+                +"DATEDIFF(SECOND FROM LOADSTARTDTTM TO LOADENDDTTM) AS DURATION FROM "+MainLogTable
+    APILog=cur.prep(SQLComment)
+    cur.execute(APILog)
+    df=pd.DataFrame()
+    list=[]
+    for LOADINDEX,LOADORDER,LOADSTEP,STEPNAME,STATUS,RECORDCOUNT,LOADSTARTDTTM,LOADENDDTTM,DURATION in cur:
+        df=df.append({'LoadIndex':LOADINDEX,
+                      'LoadOrder':LOADORDER,
+                      'LoadStep':LOADSTEP,
+                      'StepName':STEPNAME,
+                      'Status':STATUS,
+                      'RecordCount':RECORDCOUNT,
+                      'LoadStartDTTM':LOADSTARTDTTM,
+                      'LoadEndDTTM':LOADENDDTTM,
+                      'Duration':DURATION
+                      },ignore_index=True)
+    con.commit()
+    return df[['LoadIndex','LoadOrder','LoadStep','StepName','Status','RecordCount','LoadStartDTTM','LoadEndDTTM','Duration']]

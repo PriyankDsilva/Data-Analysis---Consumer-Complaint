@@ -1,4 +1,5 @@
 from tkinter import *
+import tkinter as tk
 from tkinter import ttk
 import FetchData as FD
 import Initialize
@@ -6,6 +7,10 @@ import os
 import threading
 import time
 from tkinter import messagebox
+import pandas as pd
+import FirebirdDB
+import datetime
+import Initialize
 
 # Global Variables
 TIMER=''
@@ -98,13 +103,14 @@ def MainPage(root, photo):
     # Functions
     # Fetch/Update Data Button Function
     ###################################Fetch Data Starts####################################################
-    def FetchData(root, ImageFrame, ImageLabel, photo, MainPageFrame,FetchDataButton):
+    def FetchData(root, ImageFrame, ImageLabel, photo, MainPageFrame,FetchDataButton,ViewLogButton):
         #Start the Fetching Process
         InitialParameters = Initialize.getParam()
         LoadFileName = InitialParameters[15]
 
         #Disable the Button and destroy the Image
         FetchDataButton.config(state=DISABLED)
+        ViewLogButton.config(state=DISABLED)
         ImageLabel.destroy()
 
         #Create Top and Bottom Frame
@@ -144,7 +150,7 @@ def MainPage(root, photo):
                 #print('Log File Error : ',e)
                 CurrentLogValue='Unable to Display Log.Please Wait . . .'
             else:
-                        CurrentLogValue = LogFile.read()
+                CurrentLogValue = LogFile.read()
             LogContentDisplay.config(text=CurrentLogValue)
             LogContentDisplay.after(200,DisplayLogContent)
         #run the Fetch Log function
@@ -174,11 +180,169 @@ def MainPage(root, photo):
 
     ###################################Fetch Data Ended####################################################
 
+    ###################################View Log Starts####################################################
+    def ViewLog(root, ImageFrame, ImageLabel, photo, MainPageFrame,ViewLogButton,FetchDataButton):
+        #Disable the Button and destroy the Image
+        ViewLogButton.config(state=DISABLED)
+        FetchDataButton.config(state=DISABLED)
+        ImageLabel.destroy()
+
+        #Create Top and Bottom Frame
+        TopViewFrame=Frame(ImageFrame)
+        TopViewFrame.pack(side=TOP)
+        BottopViewFrame=Frame(ImageFrame)
+        BottopViewFrame.pack(side=BOTTOM)
+        #Label to Display Log with Scroll Bar
+
+        #Function for Scroll Bar
+        def ScrollLogFunc(event):
+            ViewCanvas.configure(scrollregion=ViewCanvas.bbox("all"),height=370,width=800)
+
+        #canvas to Implement Scroll Bar for Log
+        ViewCanvas=Canvas(TopViewFrame)
+        CanvasFrame=Frame(ViewCanvas)
+        ScrollLogY=Scrollbar(TopViewFrame, orient="vertical",command=ViewCanvas.yview)
+        ViewCanvas.configure(yscrollcommand=ScrollLogY.set)
+        ViewCanvas.pack(side=LEFT)
+        ScrollLogY.pack(side=RIGHT,fill=Y)
+        ViewCanvas.create_window((0,0),window=CanvasFrame,anchor=NW)
+
+        #Label to display the Log Details
+        ViewLogDisplay=Label(CanvasFrame,text='Please Select a Log Category.',anchor=NW,justify=LEFT,wraplength=700)
+        CanvasFrame.bind("<Configure>",ScrollLogFunc)
+        ViewLogDisplay.pack(side=BOTTOM)
+
+        #DropDown Button For Archive Log
+        var = StringVar()
+        var.set('')
+        InitialParameters=Initialize.getParam()
+        LogPath=InitialParameters[19]
+        #LogPath=r'C:\Users\Priyank\Desktop\MIS\Scripting Languages\DataAnalyst-Project(Python)\Coding\Logs'
+        LogList=[]
+        for filename in os.listdir(LogPath):
+            #if filename.split('.')[-1]=='log' and filename.split('_')[0]=='DataUpdateLog':
+            LogList.append(filename)
+        def func(value):
+            LogFile=LogPath +'\\' + str(value)
+            Log = open(LogFile, 'r')
+            LogValue = Log.read()
+            ViewLogDisplay.config(text=LogValue)
+            ChoiceLabel.config(text='Archived Process Logs -')
+
+        ChoiceLabel=Label(CanvasFrame,text='LOGS !!!')
+        ChoiceLabel.pack(side=LEFT)
+        ChoiceDropDown = OptionMenu(CanvasFrame, var, *LogList, command=func)
+        ChoiceDropDown.pack(side=RIGHT)
+
+        #Function to Display the Logs based on selection
+        #APi and Source file info from Log table
+        def APILog(ChoiceLabel):
+            ChoiceLabel.config(text='Source File and API Logs -')
+            var.set('')
+            APLDataFrame=FirebirdDB.DisplayAPILog()
+            APLDataFrame['FileLen']=APLDataFrame.FileName.map(len)
+            MaxLength=0
+            for i in range(0,len(APLDataFrame)):
+                if APLDataFrame.loc[i,'FileLen'] >MaxLength:
+                    MaxLength=APLDataFrame.loc[i,'FileLen']
+
+            for i in range(0,len(APLDataFrame)):
+                APLDataFrame.loc[i,'FileName']=str(APLDataFrame.loc[i,'FileName']).ljust(MaxLength,'_')
+                m,s=divmod(APLDataFrame.loc[i,'Duration'],60)
+                h,m=divmod(m,60)
+                DurationTime=str(int(h)).rjust(2,'0')+':'+str(int(m)).rjust(2,'0')+':'+str(int(s)).rjust(2,'0')
+                APLDataFrame.loc[i,'Duration']=DurationTime
+                #print(APLDataFrame.loc[i,'LoadStartDTTM'])
+                APLDataFrame.loc[i,'LoadStartDTTM']=datetime.datetime.strptime(APLDataFrame.loc[i,'LoadStartDTTM'], "%Y-%m-%d %H:%M:%S.%f").strftime("%d %b %y %H:%M:%S")
+                APLDataFrame.loc[i,'LoadStartDTTM']=str(APLDataFrame.loc[i,'LoadStartDTTM']).ljust(30,' ').upper()
+                #print(datetime.datetime.strptime(APLDataFrame.loc[i,'LoadStartDTTM']),"%d/%m/%Y").strftime("%d%b%y"))
+                APLDataFrame.loc[i,'LoadIndex']=str(int(APLDataFrame.loc[i,'LoadIndex']))
+                APLDataFrame.loc[i,'LoadOrder']=str(int(APLDataFrame.loc[i,'LoadOrder']))
+                APLDataFrame.loc[i,'RecordCount']=str(int(APLDataFrame.loc[i,'RecordCount']))
+
+            ViewLogDisplay.config(text='--------------------------------------------------------------------------------'
+                                       '-----------------------------------------------\n'
+                                       'Index\tOrder\t'+
+                                       'FileName'.ljust(MaxLength,'_')
+                                       +'\tCount\tStartTime\t\tDuration\n'+
+                                        '--------------------------------------------------------------------------------'
+                                        '-----------------------------------------------\n'+
+                                       APLDataFrame.to_csv(sep='\t',index=False,header=False,
+                          columns=['LoadIndex','LoadOrder','FileName','RecordCount','LoadStartDTTM','Duration'])
+                                  +'--------------------------------------------------------------------------------'
+                                  '-----------------------------------------------')
+
+        #Load Step info from Main Log
+        def LoadStep(ChoiceLabel):
+            ChoiceLabel.config(text='Load Step Logs -')
+            var.set('')
+            LoadStepDataFrame=FirebirdDB.DisplayLoadStepLog()
+            LoadStepDataFrame['StatusLen']=LoadStepDataFrame.Status.map(len)
+            MaxStatus=0
+
+            for i in range(0,len(LoadStepDataFrame)):
+                if LoadStepDataFrame.loc[i,'StatusLen'] > MaxStatus:
+                    MaxStatus=LoadStepDataFrame.loc[i,'StatusLen']
+
+            for i in range(0,len(LoadStepDataFrame)):
+                LoadStepDataFrame.loc[i,'Status']=str(LoadStepDataFrame.loc[i,'Status']).ljust(MaxStatus,'_')
+                LoadStepDataFrame.loc[i,'LoadIndex']=str(int(LoadStepDataFrame.loc[i,'LoadIndex']))
+                LoadStepDataFrame.loc[i,'LoadOrder']=str(int(LoadStepDataFrame.loc[i,'LoadOrder']))
+                LoadStepDataFrame.loc[i,'RecordCount']=str(int(LoadStepDataFrame.loc[i,'RecordCount']))
+                LoadStepDataFrame.loc[i,'LoadStartDTTM']=datetime.datetime.strptime(LoadStepDataFrame.loc[i,'LoadStartDTTM'], "%Y-%m-%d %H:%M:%S.%f").strftime("%d %b %y %H:%M:%S")
+                LoadStepDataFrame.loc[i,'LoadStartDTTM']=str(LoadStepDataFrame.loc[i,'LoadStartDTTM']).ljust(30,' ').upper()
+                m,s=divmod(LoadStepDataFrame.loc[i,'Duration'],60)
+                h,m=divmod(m,60)
+                DurationTime=str(int(h)).rjust(2,'0')+':'+str(int(m)).rjust(2,'0')+':'+str(int(s)).rjust(2,'0')
+                LoadStepDataFrame.loc[i,'Duration']=DurationTime
+
+            ViewLogDisplay.config(text='--------------------------------------------------------------------------------'
+                                       '----------------------------------------------------------\n'
+                                       'Index\tOrder\t'+'Status'.ljust(MaxStatus,'_')+'\tCount\tStartTime\t\tDuration\n'+
+                                        '--------------------------------------------------------------------------------'
+                                        '----------------------------------------------------------\n'+
+                                       LoadStepDataFrame.to_csv(sep='\t',index=False,header=False,
+                          columns=['LoadIndex','LoadOrder','Status','RecordCount','LoadStartDTTM','Duration'])
+                                  +'--------------------------------------------------------------------------------'
+                                  '----------------------------------------------------------')
+
+        #Display Log details from Archived files/Rejects
+        def ProcessLog():
+            ChoiceLabel.config(text='Archived Process Logs -')
+            ViewLogDisplay.config(text='Please Select an Archive File !!!')
+            var.set('')
+
+        #Clear the View Log Screen and revert to Default Main Page
+        def DisplayLogClear(root, photo, ImageFrame, MainPageFrame):
+            ImageFrame.destroy()
+            MainPageFrame.destroy()
+            MainPage(root, photo)
+
+
+        #Buttions to choose log type
+        APILogButton = ttk.Button(BottopViewFrame, text='API Logs', width=20,
+                                 command=lambda:APILog(ChoiceLabel))
+        LoadStepButton = ttk.Button(BottopViewFrame, text='Load Step Logs', width=20,
+                                 command=lambda:LoadStep(ChoiceLabel))
+        ProcessLogButton = ttk.Button(BottopViewFrame, text='Process Logs/Rejects', width=20,
+                                 command=ProcessLog)
+        BackButton = ttk.Button(BottopViewFrame, text='Back', width=20,
+                                 command=lambda: DisplayLogClear(root, photo, ImageFrame, MainPageFrame))
+
+        #pack Buttons
+        APILogButton.pack(side=LEFT,padx=20)
+        LoadStepButton.pack(side=LEFT,padx=20)
+        ProcessLogButton.pack(side=LEFT,padx=20)
+        BackButton.pack(side=LEFT,padx=20)
+
+
+    ###################################View Log Ended####################################################
 
     # Create Buttions to Perform Tasks
     FetchDataButton = ttk.Button(MainPageFrame, text='Fetch/Update Database', width=40,
-                                 command=lambda: FetchData(root, ImageFrame, ImageLabel, photo, MainPageFrame,FetchDataButton))
-    ViewLogButton = ttk.Button(MainPageFrame, text='View Log History', width=40)
+                                 command=lambda: FetchData(root, ImageFrame, ImageLabel, photo, MainPageFrame,FetchDataButton,ViewLogButton))
+    ViewLogButton = ttk.Button(MainPageFrame, text='View Log History', width=40,
+                               command=lambda: ViewLog(root, ImageFrame, ImageLabel, photo, MainPageFrame,ViewLogButton,FetchDataButton))
     DataAnalystButton = ttk.Button(MainPageFrame, text='Data Analyst(Consumer Complaint)', width=40)
     MainExitButton = ttk.Button(MainPageFrame, text='Exit', width=40, command=root.quit)
 
@@ -256,8 +420,8 @@ def main():
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
     # Image for Consumer Complaint
     photo = PhotoImage(file='ConsumerComplaint.png')
-    SignUpFrame(root,photo)
-    #MainPage(root, photo)
+    #SignUpFrame(root,photo)
+    MainPage(root, photo)
     root.mainloop()
 
 main()
