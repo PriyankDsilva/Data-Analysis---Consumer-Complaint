@@ -1,7 +1,7 @@
 import fdb,time
 import Initialize
 import pandas as pd
-
+import datetime
 
 InitialParameters=Initialize.getParam()
 DBLocation=InitialParameters[1]
@@ -190,20 +190,9 @@ def DisplayAPILog():
                + "DATEDIFF(SECOND FROM LOADSTARTDTTM TO LOADENDDTTM) AS DURATION FROM "+LogTableName
     APILog=cur.prep(SQLComment)
     cur.execute(APILog)
-    df=pd.DataFrame()
-    list=[]
-    for LOADINDEX,LOADORDER,APICODE,FILENAME,RECORDCOUNT,LOADSTARTDTTM,LOADENDDTTM,DURATION in cur:
-        df=df.append({'LoadIndex':LOADINDEX,
-                      'LoadOrder':LOADORDER,
-                      'APICode':APICODE,
-                      'FileName':FILENAME,
-                      'RecordCount':RECORDCOUNT,
-                      'LoadStartDTTM':LOADSTARTDTTM,
-                      'LoadEndDTTM':LOADENDDTTM,
-                      'Duration':DURATION
-                      },ignore_index=True)
+    df=pd.DataFrame(cur.fetchall(),columns=['LoadIndex','LoadOrder','APICode','FileName','RecordCount','LoadStartDTTM','LoadEndDTTM','Duration'])
     con.commit()
-    return df[['LoadIndex','LoadOrder','APICode','FileName','RecordCount','LoadStartDTTM','LoadEndDTTM','Duration']]
+    return df
 
 def DisplayLoadStepLog():
     global DBPath,UserName,Password
@@ -213,18 +202,93 @@ def DisplayLoadStepLog():
                 +"DATEDIFF(SECOND FROM LOADSTARTDTTM TO LOADENDDTTM) AS DURATION FROM "+MainLogTable
     APILog=cur.prep(SQLComment)
     cur.execute(APILog)
-    df=pd.DataFrame()
-    list=[]
-    for LOADINDEX,LOADORDER,LOADSTEP,STEPNAME,STATUS,RECORDCOUNT,LOADSTARTDTTM,LOADENDDTTM,DURATION in cur:
-        df=df.append({'LoadIndex':LOADINDEX,
-                      'LoadOrder':LOADORDER,
-                      'LoadStep':LOADSTEP,
-                      'StepName':STEPNAME,
-                      'Status':STATUS,
-                      'RecordCount':RECORDCOUNT,
-                      'LoadStartDTTM':LOADSTARTDTTM,
-                      'LoadEndDTTM':LOADENDDTTM,
-                      'Duration':DURATION
-                      },ignore_index=True)
+    df=pd.DataFrame(cur.fetchall(),columns=['LoadIndex','LoadOrder','LoadStep','StepName','Status','RecordCount','LoadStartDTTM','LoadEndDTTM','Duration'])
     con.commit()
-    return df[['LoadIndex','LoadOrder','LoadStep','StepName','Status','RecordCount','LoadStartDTTM','LoadEndDTTM','Duration']]
+    return df
+
+def GetViewData():
+    global DBPath,UserName,Password
+    con = fdb.connect(database=DBPath, user=UserName, password=Password)
+    cur = con.cursor()
+    SQLComment="SELECT  DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE," \
+               " COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS," \
+               " CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW"
+
+    ViewSel=cur.prep(SQLComment)
+    cur.execute(ViewSel)
+    df=pd.DataFrame(cur.fetchall(),columns=['DateReceived','Product','SubProduct','Issue','SubIssue','ConsumerComplaint',
+                                            'CompanyPublicResponse','Company','State','ZipCode','SubmittedVia','DateSentCompany',
+                                            'CompanyResponseConsumer','TimelyResponseSts','ConsumerDisputedSts','ComplaintId'])
+
+    con.commit()
+    return df
+
+
+def GetViewDataCustom():
+    global DBPath,UserName,Password
+    con = fdb.connect(database=DBPath, user=UserName, password=Password)
+    cur = con.cursor()
+    SQLComment='''SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Bank account or service'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Credit card'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Credit reporting'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Debt collection'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Money transfers'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Mortgage'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Other financial service'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Payday loan'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Prepaid card'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Student loan'
+UNION
+SELECT FIRST 100 DATERECEIVED, PRODUCT, SUBPRODUCT, ISSUE, SUBISSUE, CONSUMERCOMPLAINT, COMPANYPUBLICRESPONSE,
+               COMPANY, STATE, ZIPCODE,SUBMITTEDVIA, DATESENTCOMPANY, COMPANYRESPONSECONSUMER, TIMELYRESPONSESTS,
+               CONSUMERDISPUTEDSTS, COMPLAINTID FROM CONSUMERCOMPLAINTVIEW
+               WHERE PRODUCT='Consumer loan'
+'''
+
+    ViewSel=cur.prep(SQLComment)
+    cur.execute(ViewSel)
+    df=pd.DataFrame(cur.fetchall(),columns=['DateReceived','Product','SubProduct','Issue','SubIssue','ConsumerComplaint',
+                                            'CompanyPublicResponse','Company','State','ZipCode','SubmittedVia','DateSentCompany',
+                                            'CompanyResponseConsumer','TimelyResponseSts','ConsumerDisputedSts','ComplaintId'])
+
+    con.commit()
+    return df
