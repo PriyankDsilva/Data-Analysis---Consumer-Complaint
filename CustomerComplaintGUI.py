@@ -344,7 +344,9 @@ def MainPage(root, photo):
                                  command=lambda: FetchData(root, ImageFrame, ImageLabel, photo, MainPageFrame,FetchDataButton,ViewLogButton))
     ViewLogButton = ttk.Button(MainPageFrame, text='View Log History', width=40,
                                command=lambda: ViewLog(root, ImageFrame, ImageLabel, photo, MainPageFrame,ViewLogButton,FetchDataButton))
-    DataAnalystButton = ttk.Button(MainPageFrame, text='Data Analyst(Consumer Complaint)', width=40)
+    DataAnalystButton = ttk.Button(MainPageFrame, text='Data Analyst(Consumer Complaint)',
+                                    #command=DataAnalysis.main,
+                                    width=40)
     MainExitButton = ttk.Button(MainPageFrame, text='Exit', width=40, command=root.quit)
 
     SpaceLabel0 = Label(MainPageFrame, text='', height=3)
@@ -421,8 +423,8 @@ def main():
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
     # Image for Consumer Complaint
     photo = PhotoImage(file='ConsumerComplaint.png')
-    #SignUpFrame(root,photo)
-    MainPage(root, photo)
+    SignUpFrame(root,photo)
+    #MainPage(root, photo)
     root.mainloop()
 
 main()

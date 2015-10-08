@@ -28,7 +28,18 @@ COT_RECEIVED_FLG=True
 COT_SEND_FLG=True
 COT_FILTER_TYPE='DAY'
 PRODUCT_ISSUE_FLG='NONE'
-
+PRODUCT_ISSUE_COMPANY_FLG='NONE'
+COMPANY_PRODUCT_FLG=False
+COMPANY_SELECT_FLG=False
+COMPANY_PRODUCT_VAL='NONE'
+COMPARE_COMPANY_VAL='NONE'
+COMPARE_COMPANY_FLG=False
+COMPANY_PRODUCT_PLOT=False
+COMPARE_SELECT_FLG=False
+CompanyDF=pd.DataFrame()
+CompanyProductDF=pd.DataFrame()
+IssueDF=pd.DataFrame()
+CompareCompanyDF=pd.DataFrame()
 
 #Function to get initial Data Frame from the System
 def LoadDF():
@@ -116,13 +127,13 @@ def Analyst(root, photo, DataFrame):
 
 
     #Filter Buttons
-    YearDropDown = Listbox(YearFrame,listvariable=year,selectmode=MULTIPLE,height=5)
+    YearDropDown = Listbox(YearFrame,listvariable=year,selectmode=MULTIPLE,height=3)
     YearDropDown.pack()
-    ProductDropDown = Listbox(ProductFrame,listvariable=product,selectmode=MULTIPLE,height=5)
+    ProductDropDown = Listbox(ProductFrame,listvariable=product,selectmode=MULTIPLE,height=3)
     ProductDropDown.pack()
-    CompanyDropDown = Listbox(CompanyFrame,listvariable=company,selectmode=MULTIPLE,height=5)
+    CompanyDropDown = Listbox(CompanyFrame,listvariable=company,selectmode=MULTIPLE,height=3)
     CompanyDropDown.pack()
-    StateDropDown = Listbox(StateFrame,listvariable=state,selectmode=MULTIPLE,height=5)
+    StateDropDown = Listbox(StateFrame,listvariable=state,selectmode=MULTIPLE,height=3)
     StateDropDown.pack()
 
     #Functions for Filters Year
@@ -210,11 +221,12 @@ def Analyst(root, photo, DataFrame):
 
     #Function to Plot Graph for Complaints over Time
 ################################################## BEGIN ###############################################################
-    def ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton):
+    def ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton):
         global REFRESH_COT_FLG
         REFRESH_COT_FLG=True
         ComplaintsOTButton.config(state=DISABLED)
         ProductIssueButton.config(state=DISABLED)
+        CompanyButton.config(state=DISABLED)
         ImageLabel.destroy()
 
         #frame to select options
@@ -367,17 +379,19 @@ def Analyst(root, photo, DataFrame):
 
     #function to plot the Products and Issue Pie Chart
 ################################################## BEGIN ###############################################################
-    def ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton):
-        global REFRESH_COT_FLG
+    def ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton):
+        global REFRESH_COT_FLG,IssueDF
+        IssueDF=FilteredDF
         REFRESH_COT_FLG=True
         ComplaintsOTButton.config(state=DISABLED)
         ProductIssueButton.config(state=DISABLED)
+        CompanyButton.config(state=DISABLED)
         ImageLabel.destroy()
 
         OptionFrame=Frame(ImageFrame)
         OptionFrame.pack(side=TOP)
 
-        var3=StringVar('')
+        var3=StringVar(value='Select Product')
         ProductIssueChoices=['Select Product']
 
         #function to display the relative Issues
@@ -399,8 +413,32 @@ def Analyst(root, photo, DataFrame):
         ProductIssueChoice.pack(side=LEFT)
         ProductIssueChoice.bind('<Configure>', PIfunc)
 
+        #function to display the cascading ISsue dropdown
+        var4=StringVar(value='Select Issue')
+        ProductICChoices=['Select Product First']
+
+        def PICfunc(value):
+            global PRODUCT_ISSUE_FLG,REFRESH_COT_FLG,PRODUCT_ISSUE_COMPANY_FLG,IssueDF
+            InternalFlag=True
+            if var4.get() in pd.unique(IssueDF.Issue):
+                PRODUCT_ISSUE_COMPANY_FLG=var4.get()
+            elif var4.get() =='None':
+                PRODUCT_ISSUE_COMPANY_FLG='NONE'
+            else:
+                InternalFlag=False
+
+            if InternalFlag is True:
+                REFRESH_COT_FLG=True
+
+        #Dropdown
+        ProductIssueCompanyChoice=OptionMenu(OptionFrame,var4,*ProductICChoices)
+        ProductIssueCompanyChoice.pack(side=LEFT)
+        ProductIssueCompanyChoice.bind('<Configure>', PICfunc)
+
+
+
         #figure to plot
-        f = Figure()
+        f = plt.figure()
 
         #FUNCTION TO ANIMATE
         def PIAnimate(i):
@@ -408,17 +446,23 @@ def Analyst(root, photo, DataFrame):
             try:
                 if REFRESH_COT_FLG is True:
 
-                    var3.set('Select Product')
+                    #var3.set('Select Product')
                     ProductIssueChoice['menu'].delete(0,END)
                     ProductIssueChoice['menu'].add_command(label='None', command=tk._setit(var3, 'None'))
                     for choice in pd.unique(FilteredDF.Product):
                         ProductIssueChoice['menu'].add_command(label=choice, command=tk._setit(var3, choice))
 
-                    ax1 = f.add_subplot(221)
-                    ax1.clear()
-                    ax2 = f.add_subplot(222)
-                    ax3 = f.add_subplot(223)
+                    #CODE TO EMPTY THE iSSUE DROPdOWN
+                    ProductIssueCompanyChoice['menu'].delete(0,END)
+                    ProductIssueCompanyChoice['menu'].add_command(label='None', command=tk._setit(var4, 'Select Product First'))
 
+                    ax1 = f.add_subplot(111)
+                    ax1.clear()
+                    #ax2 = f.add_subplot(211)
+                    #ax3 = f.add_subplot(212)
+
+
+                    #the the initial Product Pie chart
                     ExplodeListProduct=[]
                     for i in range(0,len(pd.unique(FilteredDF.Product))):
                         if i%2==0:
@@ -433,18 +477,29 @@ def Analyst(root, photo, DataFrame):
                     ax1.set_title('Products')
 
                     #code for Sub Plots
-                    global PRODUCT_ISSUE_FLG
+                    global PRODUCT_ISSUE_FLG,IssueDF,PRODUCT_ISSUE_COMPANY_FLG
                     if PRODUCT_ISSUE_FLG in pd.unique(FilteredDF.Product):
+
+
+
                         #Code for Issues
                         f.delaxes(ax1)
-
+                        #GET FILTERED data after selecting the product
                         IssueStr='Product:'+PRODUCT_ISSUE_FLG+'\nIssues'
-
+                        ax2 = f.add_subplot(111)
                         ax2.clear()
                         IssueFilterList=[]
                         IssueFilterList.append(PRODUCT_ISSUE_FLG)
                         IssueDF=FilteredDF[ (FilteredDF.Product.isin(IssueFilterList)) ]
 
+
+                        #populate the dropdown
+                        ProductIssueCompanyChoice['menu'].delete(0,END)
+                        ProductIssueCompanyChoice['menu'].add_command(label='None', command=tk._setit(var4, 'None'))
+                        for choice in pd.unique(IssueDF.Issue):
+                            ProductIssueCompanyChoice['menu'].add_command(label=choice, command=tk._setit(var4, choice))
+
+                        #PLOT THE iSSUES inside the product
                         ExplodeListIssue=[]
                         for i in range(0,len(pd.unique(IssueDF.Issue))):
                             if i%2==0:
@@ -458,26 +513,43 @@ def Analyst(root, photo, DataFrame):
                                 labels=pd.unique(IssueDF.Issue),shadow=True,autopct='%1.1f%%',
                                 startangle=90)
                         ax2.set_title(IssueStr)
+                        #IssueDF.ComplaintId.groupby([IssueDF.Issue]).count().plot(kind='barh')
 
                         #code for Company
-                        ax3.clear()
-                        ExplodeListCompany=[]
-                        for i in range(0,len(pd.unique(IssueDF.Company))):
-                            if i%2==0:
-                                ExplodeListCompany.append(0.1)
-                            else:
-                                ExplodeListCompany.append(0)
+                        if PRODUCT_ISSUE_COMPANY_FLG in pd.unique(IssueDF.Issue):
 
-                        #plot Pie chart for Company
-                        ax3.pie(IssueDF.ComplaintId.groupby([IssueDF.Company]).count(),
-                                explode=tuple(ExplodeListCompany),
-                                labels=pd.unique(IssueDF.Company),shadow=True,autopct='%1.1f%%',
-                                startangle=90)
-                        ax3.set_title('Companies')
+                            f.delaxes(ax2)
+                            #var3.set('Select Product')
+
+
+                            ax3 = f.add_subplot(111)
+                            ax3.clear()
+                            #GET FILTERED DF FOR COMPANY
+                            IssueFilterList=[]
+                            IssueFilterList.append(PRODUCT_ISSUE_COMPANY_FLG)
+                            IssueCompanyDF=IssueDF[ (IssueDF.Issue.isin(IssueFilterList)) ]
+
+                            ExplodeListCompany=[]
+                            for i in range(0,len(pd.unique(IssueCompanyDF.Company))):
+                                if i%2==0:
+                                    ExplodeListCompany.append(0.1)
+                                else:
+                                    ExplodeListCompany.append(0)
+
+                            #plot Pie chart for Company
+                            ax3.pie(IssueCompanyDF.ComplaintId.groupby([IssueCompanyDF.Company]).count(),
+                                    explode=tuple(ExplodeListCompany),
+                                    labels=pd.unique(IssueCompanyDF.Company),shadow=True,autopct='%1.1f%%',
+                                    startangle=90)
+                            CompanyStr='Product:'+PRODUCT_ISSUE_FLG+' Issues:'+PRODUCT_ISSUE_COMPANY_FLG+'\nCompanies'
+                            ax3.set_title(CompanyStr)
 
                     else:
-                        f.delaxes(ax2)
-                        f.delaxes(ax3)
+                        try:
+                            f.delaxes(ax2)
+                            f.delaxes(ax3)
+                        except Exception as e:
+                            print()
 
                     REFRESH_COT_FLG=False
             except Exception as e:
@@ -497,6 +569,282 @@ def Analyst(root, photo, DataFrame):
 
         #Animation Function to Display filter values
         ani=animation.FuncAnimation(f,PIAnimate,1000)
+
+########################################################################################################################
+
+    #function for Company Analysis
+################################################## BEGIN ###############################################################
+    def Company(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton):
+        global REFRESH_COT_FLG,COMPANY_PRODUCT_FLG,COMPANY_SELECT_FLG
+        REFRESH_COT_FLG=True
+        COMPANY_SELECT_FLG=False
+        COMPANY_PRODUCT_FLG=False
+        COMPARE_COMPANY_FLG=False
+        ComplaintsOTButton.config(state=DISABLED)
+        ProductIssueButton.config(state=DISABLED)
+        CompanyButton.config(state=DISABLED)
+        ImageLabel.destroy()
+
+        OptionFrame=Frame(ImageFrame)
+        OptionFrame.pack(side=TOP)
+
+        CompareFrame=Frame(ImageFrame)
+        CompareFrame.pack(side=BOTTOM)
+
+
+        var=StringVar(value='Select Company')
+        CompanyOptions=pd.unique(FilteredDF.Company)
+        global CompanyDF,CompanyProductDF,CompareCompanyDF
+        CompanyDF=FilteredDF
+        CompanyProductDF=FilteredDF
+
+
+        #function to select te recieved or sent lines
+        def Companyfunc(value):
+            global REFRESH_COT_FLG,CompanyDF,COMPANY_SELECT_FLG,COMPANY_PRODUCT_PLOT
+            #print('Companyfunc')
+            CompanyList=[]
+            CompanyList.append(value)
+            CompanyDF=FilteredDF[FilteredDF.Company.isin(CompanyList)]
+            COMPANY_SELECT_FLG=True
+            REFRESH_COT_FLG=True
+            COMPANY_PRODUCT_PLOT=False
+            COMPARE_COMPANY_FLG=False
+
+
+        #Drop down buttons
+        CompanyChoice=OptionMenu(OptionFrame,var,*CompanyOptions,command=Companyfunc)
+        CompanyChoice.pack(side=LEFT)
+
+        #function to get the products related to company
+        var2=StringVar(value='Please Select Company First')
+        CompanyProductOptions=['None']
+
+
+        def CompanyProductfunc(value):
+            global REFRESH_COT_FLG,CompanyProductDF,CompanyDF,COMPANY_PRODUCT_FLG,COMPANY_PRODUCT_VAL,COMPARE_SELECT_FLG
+            #print('CompanyProductfunc')
+            InternalFlag=True
+            if var2.get() in pd.unique(CompanyDF.Product):
+                COMPANY_PRODUCT_VAL=var2.get()
+            elif var2.get() =='None':
+                COMPANY_PRODUCT_VAL='NONE'
+            else:
+                InternalFlag=False
+
+            if InternalFlag is True:
+                REFRESH_COT_FLG=True
+                COMPANY_PRODUCT_FLG=True
+                COMPARE_SELECT_FLG=True
+                COMPARE_COMPANY_FLG=False
+                #print('COMPANY_PRODUCT_VAL :',COMPANY_PRODUCT_VAL)
+
+        CompanyProductChoice=OptionMenu(OptionFrame,var2,*CompanyProductOptions)
+        CompanyProductChoice.pack(side=RIGHT)
+        CompanyProductChoice.bind('<Configure>', CompanyProductfunc)
+
+
+
+        #Code for Comparison Drop Down
+
+        var3=StringVar(value='Please Select Company/Product First')
+        CompareCompanyOptions=['None']
+        CompareCompanyDF=FilteredDF
+
+        def CompareCompanyfunc(value):
+            global REFRESH_COT_FLG,CompareCompanyDF,COMPANY_PRODUCT_FLG,COMPARE_COMPANY_FLG,COMPARE_COMPANY_VAL
+            print('CompanyComparefunc')
+            InternalFlag=True
+            if var3.get() in pd.unique(CompareCompanyDF.Company):
+                COMPARE_COMPANY_VAL=var3.get()
+            elif var3.get() =='None':
+                COMPARE_COMPANY_VAL='NONE'
+            else:
+                InternalFlag=False
+
+            if InternalFlag is True:
+                print('reset done')
+                REFRESH_COT_FLG=True
+                COMPARE_COMPANY_FLG=True
+
+
+        CompareCompanyChoice=OptionMenu(CompareFrame,var3,*CompareCompanyOptions)
+        CompareCompanyChoice.pack(side=RIGHT)
+        CompareCompanyChoice.bind('<Configure>', CompareCompanyfunc)
+
+
+
+        f = plt.figure()
+
+        #animate function for company
+        def CompanyAnimate(i):
+            global REFRESH_COT_FLG,CompanyDF,CompareCompanyDF,COMPANY_SELECT_FLG,COMPARE_COMPANY_VAL,COMPARE_COMPANY_FLG
+            global COMPANY_PRODUCT_FLG,CompanyProductDF,COMPANY_PRODUCT_VAL,COMPANY_PRODUCT_PLOT,COMPARE_SELECT_FLG
+            try:
+                if REFRESH_COT_FLG is True:
+
+                    ax1 = f.add_subplot(221)
+                    ax1.clear()
+                    #plot basic chart for all products or the company specific products if selected
+                    ExplodeListProduct=[]
+                    for i in range(0,len(pd.unique(CompanyDF.Product))):
+                        if i%2==0:
+                            ExplodeListProduct.append(0.1)
+                        else:
+                            ExplodeListProduct.append(0)
+                    #plot Pie chart for Products
+                    ax1.pie(CompanyDF.ComplaintId.groupby([CompanyDF.Product]).count(),
+                            explode=tuple(ExplodeListProduct),
+                            labels=pd.unique(CompanyDF.Product),shadow=True,autopct='%1.1f%%',
+                            startangle=90)
+                    CompanyName=''
+                    if len(pd.unique(CompanyDF.Company)) == 1:
+                        CompanyName=str(pd.unique(CompanyDF.Company)[0])+' Products'
+                    else:
+                        CompanyName='All Company Products'
+                    ax1.set_title(CompanyName)
+
+
+
+                    if COMPANY_SELECT_FLG is True:
+
+                        var2.set('Select Product')
+                        CompanyProductChoice['menu'].delete(0,END)
+                        CompanyProductChoice['menu'].add_command(label='None', command=tk._setit(var2, 'None'))
+                        for choice in pd.unique(CompanyDF.Product):
+                            CompanyProductChoice['menu'].add_command(label=choice, command=tk._setit(var2, choice))
+                        COMPANY_SELECT_FLG=False
+
+                    if COMPARE_SELECT_FLG is True:
+                        #create a dataframe
+                        print('set for compare company')
+                        CompareList=[]
+                        CompareList.append(var2.get())
+                        print(CompareList)
+                        CompareCompanyDF=FilteredDF[FilteredDF.Product.isin(CompareList)]
+
+                        var3.set('Select Company')
+                        CompareCompanyChoice['menu'].delete(0,END)
+                        CompareCompanyChoice['menu'].add_command(label='None', command=tk._setit(var3, 'None'))
+                        for choice in pd.unique(CompareCompanyDF.Company):
+                            CompareCompanyChoice['menu'].add_command(label=choice, command=tk._setit(var3, choice))
+                        COMPARE_SELECT_FLG=False
+
+
+                    #code to display the product issues is company Product is selected
+                    ax2=f.add_subplot(222)
+                    if COMPANY_PRODUCT_FLG is True:
+
+                        ax2.clear()
+
+                        CompanyProductList=[]
+                        CompanyProductList.append(COMPANY_PRODUCT_VAL)
+                        CompanyProductDF=CompanyDF[ (CompanyDF.Product.isin(CompanyProductList)) ]
+
+                        ExplodeListCompanyProductIssue=[]
+                        for i in range(0,len(pd.unique(CompanyProductDF.Issue))):
+                            if i%2==0:
+                                ExplodeListCompanyProductIssue.append(0.1)
+                            else:
+                                ExplodeListCompanyProductIssue.append(0)
+
+
+                        #plot Pie chart for Products
+                        ax2.pie(CompanyProductDF.ComplaintId.groupby([CompanyProductDF.Issue]).count(),
+                                explode=tuple(ExplodeListCompanyProductIssue),
+                                labels=pd.unique(CompanyProductDF.Issue),shadow=True,autopct='%1.1f%%',
+                                startangle=90)
+                        CompanyName=''
+                        if len(pd.unique(CompanyProductDF.Product)) == 1:
+                            CompanyName=str(pd.unique(CompanyProductDF.Product)[0])+' Issues'
+                        else:
+                            CompanyName='Product Not Specified'
+                        ax2.set_title(CompanyName)
+
+                        COMPANY_PRODUCT_PLOT=True
+                        COMPANY_PRODUCT_FLG=False
+                    else:
+                        if COMPANY_PRODUCT_PLOT is False:
+                            f.delaxes(ax2)
+
+                        #code to add compare Company
+                    if COMPARE_COMPANY_FLG is True:
+                        ax3=f.add_subplot(223)
+                        ax3.clear()
+
+
+                        #Plot issues of the compare company
+                        CompareList=[]
+                        CompareList.append(COMPARE_COMPANY_VAL)
+                        CompareDF=CompareCompanyDF[ (CompareCompanyDF.Company.isin(CompareList)) ]
+
+
+                        ExplodeListCompareIssue=[]
+                        for i in range(0,len(pd.unique(CompareDF.Issue))):
+                            if i%2==0:
+                                ExplodeListCompareIssue.append(0.1)
+                            else:
+                                ExplodeListCompareIssue.append(0)
+
+                        ax3.pie(CompareDF.ComplaintId.groupby([CompareDF.Issue]).count(),
+                                    explode=tuple(ExplodeListCompareIssue),
+                                    labels=pd.unique(CompareDF.Issue),shadow=True,autopct='%1.1f%%',
+                                    startangle=90)
+                        CompareName='Company :'+COMPARE_COMPANY_VAL
+                        ax3.set_title(CompareName)
+
+                        #Plot compare of the compare company
+                        Company1=var.get()
+                        Company2=var3.get()
+
+                        CompanyLists=[]
+                        CompanyLists.append(Company1)
+                        CompanyLists.append(Company2)
+                        print(CompanyLists)
+                        ax4=f.add_subplot(224)
+                        ax4.clear()
+
+                        PlotDF=CompareCompanyDF[CompareCompanyDF.Company.isin(CompanyLists)]
+
+                        ExplodeCompare=[]
+                        for i in range(0,len(pd.unique(PlotDF.Company))):
+                            if i%2==0:
+                                ExplodeCompare.append(0.1)
+                            else:
+                                ExplodeCompare.append(0)
+
+
+                        #PlotDF.Issue.groupby([PlotDF.Company,PlotDF.Issue]).count().plot(kind='bar')
+                        ax4.pie(PlotDF.Issue.groupby([PlotDF.Company]).count(),
+                                    explode=tuple(ExplodeCompare),
+                                    labels=pd.unique(PlotDF.Company),shadow=True,autopct='%1.1f%%',
+                                    startangle=90)
+
+
+                        ax4.set_title('Comparison')
+
+                        COMPARE_COMPANY_FLG=False
+
+
+
+
+
+            except Exception as e:
+                print(e)
+
+
+        #canvas to Display
+        canvas = FigureCanvasTkAgg(f, ImageFrame)
+        canvas.show()
+        canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=True)
+
+        #Toolbar for the Plots
+        toolbar=NavigationToolbar2TkAgg(canvas,ImageFrame)
+        toolbar.update()
+        canvas._tkcanvas.pack(side=TOP,fill=BOTH,expand=True)
+
+        #Animation Function to Display filter values
+        ani=animation.FuncAnimation(f,CompanyAnimate,1000)
 
 ########################################################################################################################
 
@@ -524,26 +872,24 @@ def Analyst(root, photo, DataFrame):
 
     SpaceLabel00.pack()#Space Label
     ComplaintsOTButton = ttk.Button(MainPageFrame, text='Complaints Over Time',
-                                    command=lambda: ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton),
+                                    command=lambda: ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton),
                                     width=40,padding=10)
     ComplaintsOTButton.pack()
     SpaceLabel0.pack()#Space Label
 
-    ProductIssueButton = ttk.Button(MainPageFrame, text='Product/Issue Analysis',
-                                    command=lambda: ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton),
+    ProductIssueButton = ttk.Button(MainPageFrame, text='Product Analysis',
+                                    command=lambda: ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton),
                                width=40,padding=10)
     ProductIssueButton.pack()
     SpaceLabel1.pack()#Space Label
 
-
-
-    #####
-    SampleButton2 = ttk.Button(MainPageFrame, text='In Progress. . .',
-                                    command=Working,
+    CompanyButton = ttk.Button(MainPageFrame, text='Company Analysis',
+                                    command=lambda: Company(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton),
                                width=40,padding=10)
-    SampleButton2.pack()
+    CompanyButton.pack()
     SpaceLabel2.pack()#Space Label
 
+    #####
     SampleButton3 = ttk.Button(MainPageFrame, text='In Progress. . .',
                                     command=Working,
                                width=40,padding=10)
