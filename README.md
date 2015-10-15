@@ -34,7 +34,7 @@ threading
 Issue encountered with python Libraries:
 As we were using tkinter ,we were unable to plot graphs using GUI because of some erroe due to matplotlib.
 Solution - uninstalled matplotlib and pillow libraries and reinstall the core libraries from sourceforge
-*Note-the .whl files for these libraries are uploaded in Download folder.
+*Note-the .whl files for these libraries are uploaded in the folder.
 to install them just write pip install .whl file
 
 Modules:
