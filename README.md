@@ -3,6 +3,8 @@ Analyse consumer complaint data from https://data.consumerfinance.gov using pyth
 
 
 Username and Password for the GUI is admin/admin
+*Note-For testing purpose we have also created a proportional sample of source and saved it in ManualOverrideSource folder.
+if there exists a ConsumerComplaints.csv file in this folder the the utulity will override the data fetching process from db and load the source fron the csv file
 
 Requirement:
 Python 3.4/Anaconda with python 3.4
