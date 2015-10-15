@@ -1,5 +1,6 @@
-import FirebirdDB
-import Initialize
+import os
+from pandastable import Table
+from pandastable.data import TableModel
 from tkinter import messagebox
 from tkinter import *
 from tkinter import ttk
@@ -8,14 +9,11 @@ import FirebirdDB
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.finance import quotes_historical_yahoo_ochl
 import datetime
 import numpy as np
-import matplotlib.dates as mdates
 import  matplotlib.animation  as animation
 from matplotlib import style
-from matplotlib.dates import YearLocator, MonthLocator, DateFormatter,DayLocator
-
+from matplotlib.dates import  MonthLocator, DateFormatter
 matplotlib.use("TKAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
@@ -40,16 +38,22 @@ CompanyDF=pd.DataFrame()
 CompanyProductDF=pd.DataFrame()
 IssueDF=pd.DataFrame()
 CompareCompanyDF=pd.DataFrame()
+ReportRefreshFlag=True
 
 #Function to get initial Data Frame from the System
 def LoadDF():
-    #DataFrame = FirebirdDB.GetViewData()
-    #DataFrame = FirebirdDB.GetViewDataCustom()
-    DataFrame = pd.read_csv('TempRecords.csv')
-    #DataFrame = pd.read_csv('TempRecordsTotal.csv',low_memory=False)
-    #DataFrame.to_csv('TempRecordsTotal.csv',index=False)
+    #coded for manual overide of source for evaluation purpose
+    if os.path.isfile(r'./ManualOverrideSource/ConsumerComplaints.csv'):
+        DataFrame = pd.read_csv(r'./ManualOverrideSource/ConsumerComplaints.csv')
+        messagebox.showinfo("Alert !!!", 'Fetching Data from csv file-Manual Override In Progress')
+    else:
+        DataFrame = FirebirdDB.GetViewData()
+        messagebox.showinfo("Alert !!!", 'Fetching Data from Firebird Database')
+        #DataFrame.to_csv('ConsumerComplaints.csv',index=False)
+
     DataFrame.DateReceived = pd.to_datetime(DataFrame.DateReceived)
     DataFrame.DateSentCompany = pd.to_datetime(DataFrame.DateSentCompany)
+    DataFrame.ConsumerDisputedSts=DataFrame.ConsumerDisputedSts.fillna('Data Unavailable')
 
     return DataFrame
 
@@ -221,12 +225,13 @@ def Analyst(root, photo, DataFrame):
 
     #Function to Plot Graph for Complaints over Time
 ################################################## BEGIN ###############################################################
-    def ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton):
+    def ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton):
         global REFRESH_COT_FLG
         REFRESH_COT_FLG=True
         ComplaintsOTButton.config(state=DISABLED)
         ProductIssueButton.config(state=DISABLED)
         CompanyButton.config(state=DISABLED)
+        ReportButton.config(state=DISABLED)
         ImageLabel.destroy()
 
         #frame to select options
@@ -379,13 +384,14 @@ def Analyst(root, photo, DataFrame):
 
     #function to plot the Products and Issue Pie Chart
 ################################################## BEGIN ###############################################################
-    def ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton):
+    def ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton):
         global REFRESH_COT_FLG,IssueDF
         IssueDF=FilteredDF
         REFRESH_COT_FLG=True
         ComplaintsOTButton.config(state=DISABLED)
         ProductIssueButton.config(state=DISABLED)
         CompanyButton.config(state=DISABLED)
+        ReportButton.config(state=DISABLED)
         ImageLabel.destroy()
 
         OptionFrame=Frame(ImageFrame)
@@ -480,8 +486,6 @@ def Analyst(root, photo, DataFrame):
                     global PRODUCT_ISSUE_FLG,IssueDF,PRODUCT_ISSUE_COMPANY_FLG
                     if PRODUCT_ISSUE_FLG in pd.unique(FilteredDF.Product):
 
-
-
                         #Code for Issues
                         f.delaxes(ax1)
                         #GET FILTERED data after selecting the product
@@ -520,8 +524,6 @@ def Analyst(root, photo, DataFrame):
 
                             f.delaxes(ax2)
                             #var3.set('Select Product')
-
-
                             ax3 = f.add_subplot(111)
                             ax3.clear()
                             #GET FILTERED DF FOR COMPANY
@@ -574,15 +576,17 @@ def Analyst(root, photo, DataFrame):
 
     #function for Company Analysis
 ################################################## BEGIN ###############################################################
-    def Company(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton):
-        global REFRESH_COT_FLG,COMPANY_PRODUCT_FLG,COMPANY_SELECT_FLG
+    def Company(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton):
+        global REFRESH_COT_FLG,COMPANY_PRODUCT_FLG,COMPANY_SELECT_FLG,COMPANY_PRODUCT_PLOT,COMPANY_PRODUCT_PLOT
         REFRESH_COT_FLG=True
         COMPANY_SELECT_FLG=False
         COMPANY_PRODUCT_FLG=False
         COMPARE_COMPANY_FLG=False
+        COMPANY_PRODUCT_PLOT=False
         ComplaintsOTButton.config(state=DISABLED)
         ProductIssueButton.config(state=DISABLED)
         CompanyButton.config(state=DISABLED)
+        ReportButton.config(state=DISABLED)
         ImageLabel.destroy()
 
         OptionFrame=Frame(ImageFrame)
@@ -653,7 +657,7 @@ def Analyst(root, photo, DataFrame):
 
         def CompareCompanyfunc(value):
             global REFRESH_COT_FLG,CompareCompanyDF,COMPANY_PRODUCT_FLG,COMPARE_COMPANY_FLG,COMPARE_COMPANY_VAL
-            print('CompanyComparefunc')
+            #print('CompanyComparefunc')
             InternalFlag=True
             if var3.get() in pd.unique(CompareCompanyDF.Company):
                 COMPARE_COMPANY_VAL=var3.get()
@@ -663,7 +667,7 @@ def Analyst(root, photo, DataFrame):
                 InternalFlag=False
 
             if InternalFlag is True:
-                print('reset done')
+                #print('reset done')
                 REFRESH_COT_FLG=True
                 COMPARE_COMPANY_FLG=True
 
@@ -717,10 +721,10 @@ def Analyst(root, photo, DataFrame):
 
                     if COMPARE_SELECT_FLG is True:
                         #create a dataframe
-                        print('set for compare company')
+                        #print('set for compare company')
                         CompareList=[]
                         CompareList.append(var2.get())
-                        print(CompareList)
+                        #print(CompareList)
                         CompareCompanyDF=FilteredDF[FilteredDF.Product.isin(CompareList)]
 
                         var3.set('Select Company')
@@ -800,7 +804,7 @@ def Analyst(root, photo, DataFrame):
                         CompanyLists=[]
                         CompanyLists.append(Company1)
                         CompanyLists.append(Company2)
-                        print(CompanyLists)
+                        #print(CompanyLists)
                         ax4=f.add_subplot(224)
                         ax4.clear()
 
@@ -820,13 +824,8 @@ def Analyst(root, photo, DataFrame):
                                     labels=pd.unique(PlotDF.Company),shadow=True,autopct='%1.1f%%',
                                     startangle=90)
 
-
                         ax4.set_title('Comparison')
-
                         COMPARE_COMPANY_FLG=False
-
-
-
 
 
             except Exception as e:
@@ -845,6 +844,94 @@ def Analyst(root, photo, DataFrame):
 
         #Animation Function to Display filter values
         ani=animation.FuncAnimation(f,CompanyAnimate,1000)
+
+########################################################################################################################
+
+    #Function to get Report
+################################################## BEGIN ###############################################################
+    def Report(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton):
+        try:
+            global REFRESH_COT_FLG,ReportRefreshFlag
+            ReportRefreshFlag=True
+            REFRESH_COT_FLG=True
+            ComplaintsOTButton.config(state=DISABLED)
+            ProductIssueButton.config(state=DISABLED)
+            CompanyButton.config(state=DISABLED)
+            ReportButton.config(state=DISABLED)
+            ImageLabel.destroy()
+
+            TopFetchFrame=Frame(ImageFrame)
+            TopFetchFrame.pack(side=TOP)
+
+            BottomFrame=Frame(ImageFrame)
+            BottomFrame.pack()
+            f = plt.figure()
+
+
+            pt = Table(TopFetchFrame,showtoolbar=True)
+            pt.model=TableModel(rows=20,columns=5)
+            pt.show()
+
+            def ReportAnimate(i):
+                try:
+                    global REFRESH_COT_FLG
+                    if REFRESH_COT_FLG is True:
+                        global FilteredDF,ReportRefreshFlag
+                        ax1=f.add_subplot(131)
+                        ax1.clear()
+                        ax1.pie(FilteredDF.Issue.groupby([FilteredDF.CompanyResponseConsumer]).count(),
+                                labels=pd.unique(FilteredDF.CompanyResponseConsumer),shadow=True,autopct='%1.1f%%',
+                                            startangle=90)
+                        ax1.set_title('Company Response')
+                        ax2=f.add_subplot(132)
+                        ax2.clear()
+                        ax2.pie(FilteredDF.Issue.groupby([FilteredDF.TimelyResponseSts]).count(),
+                                labels=pd.unique(FilteredDF.TimelyResponseSts),shadow=True,autopct='%1.1f%%',
+                                            startangle=90)
+                        ax2.set_title('Timely Closure')
+                        ax3=f.add_subplot(133)
+                        ax3.clear()
+                        ax3.pie(FilteredDF.Issue.groupby([FilteredDF.ConsumerDisputedSts]).count(),
+                                labels=pd.unique(FilteredDF.ConsumerDisputedSts),shadow=True,autopct='%1.1f%%',
+                                            startangle=90)
+                        ax3.set_title('User Satisfaction')
+
+                        ReportDF=FilteredDF
+                        ReportDF['Issue Count']=ReportDF.ComplaintId
+
+                        PivotDF=ReportDF.pivot_table(['Issue Count'],
+                                                        index=['Company'],
+                                                        columns=['Product'],
+                                                        aggfunc='count',
+                                                        fill_value =0
+                                                      )
+                        PivotColumnIndex=list(PivotDF.index.values)
+                        DF=pd.DataFrame(PivotDF,index=PivotColumnIndex)
+
+                        if ReportRefreshFlag is True:
+                            pt.updateModel(TableModel(dataframe=DF))
+                            pt.showIndex()
+                            pt.redraw()
+                            ReportRefreshFlag=False
+                        else:
+                            pt.updateModel(TableModel(dataframe=DF))
+                            pt.showIndex()
+                            pt.redraw()
+
+                        REFRESH_COT_FLG=False
+
+                except Exception as e:
+                    print(e)
+
+            canvas = FigureCanvasTkAgg(f, BottomFrame)
+            canvas.show()
+            canvas.get_tk_widget().pack()
+            ani=animation.FuncAnimation(f,ReportAnimate,1000)
+
+        except Exception as e:
+            print('')
+
+
 
 ########################################################################################################################
 
@@ -867,33 +954,31 @@ def Analyst(root, photo, DataFrame):
     SpaceLabel4 = Label(MainPageFrame, text='', height=3)
 
 
-    def Working():
-        messagebox.showinfo("ALERT !!!", 'In Progress !!!')
 
     SpaceLabel00.pack()#Space Label
     ComplaintsOTButton = ttk.Button(MainPageFrame, text='Complaints Over Time',
-                                    command=lambda: ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton),
+                                    command=lambda: ComplaintsOT(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton),
                                     width=40,padding=10)
     ComplaintsOTButton.pack()
     SpaceLabel0.pack()#Space Label
 
     ProductIssueButton = ttk.Button(MainPageFrame, text='Product Analysis',
-                                    command=lambda: ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton),
+                                    command=lambda: ProductIssue(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton),
                                width=40,padding=10)
     ProductIssueButton.pack()
     SpaceLabel1.pack()#Space Label
 
     CompanyButton = ttk.Button(MainPageFrame, text='Company Analysis',
-                                    command=lambda: Company(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton),
+                                    command=lambda: Company(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton),
                                width=40,padding=10)
     CompanyButton.pack()
     SpaceLabel2.pack()#Space Label
 
     #####
-    SampleButton3 = ttk.Button(MainPageFrame, text='In Progress. . .',
-                                    command=Working,
+    ReportButton = ttk.Button(MainPageFrame, text='Report',
+                                    command=lambda: Report(ImageFrame, ImageLabel, ComplaintsOTButton,ProductIssueButton,CompanyButton,ReportButton),
                                width=40,padding=10)
-    SampleButton3.pack()
+    ReportButton.pack()
     SpaceLabel3.pack()#Space Label
     #####
 
@@ -907,8 +992,9 @@ def Analyst(root, photo, DataFrame):
     SpaceLabel4.pack()#Space Label
 
 #Main Function
-def main():
-    root = Tk()
+def AnalystMain(root,ImageFrame,MainPageFrame):
+    ImageFrame.destroy()
+    MainPageFrame.destroy()
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
     root.title('Consumer Complaint Analysis')
     #root.geometry('1250x700')
@@ -918,5 +1004,4 @@ def main():
     Analyst(root, photo, DataFrame)
     root.mainloop()
 
-
-main()
+#AnalystMain(Tk(),Frame(),Frame())

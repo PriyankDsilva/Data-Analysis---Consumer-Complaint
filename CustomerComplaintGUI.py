@@ -11,7 +11,7 @@ import pandas as pd
 import FirebirdDB
 import datetime
 import Initialize
-#import DataAnalysis
+import DataAnalysis
 
 # Global Variables
 TIMER=''
@@ -345,7 +345,7 @@ def MainPage(root, photo):
     ViewLogButton = ttk.Button(MainPageFrame, text='View Log History', width=40,
                                command=lambda: ViewLog(root, ImageFrame, ImageLabel, photo, MainPageFrame,ViewLogButton,FetchDataButton))
     DataAnalystButton = ttk.Button(MainPageFrame, text='Data Analyst(Consumer Complaint)',
-                                    #command=DataAnalysis.main,
+                                    command=lambda:DataAnalysis.AnalystMain(root,ImageFrame,MainPageFrame),
                                     width=40)
     MainExitButton = ttk.Button(MainPageFrame, text='Exit', width=40, command=root.quit)
 
@@ -423,8 +423,8 @@ def main():
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
     # Image for Consumer Complaint
     photo = PhotoImage(file='ConsumerComplaint.png')
-    SignUpFrame(root,photo)
-    #MainPage(root, photo)
+    #SignUpFrame(root,photo)
+    MainPage(root, photo)
     root.mainloop()
 
 main()
