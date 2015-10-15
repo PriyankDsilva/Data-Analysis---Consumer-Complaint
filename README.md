@@ -2,6 +2,8 @@
 Analyse consumer complaint data from https://data.consumerfinance.gov using python. Also use of tkinter libs to have a GUI front End for the program.  This solution will help vendors and customers to generate adhoc customized reports  as per their requirement. Reports will have various categories depending on data  requested and will be have target end users as both business and customers
 
 
+Username and Password for the GUI is admin/admin
+
 Requirement:
 Python 3.4/Anaconda with python 3.4
 

@@ -1,13 +1,10 @@
 from tkinter import *
-import tkinter as tk
 from tkinter import ttk
 import FetchData as FD
-import Initialize
 import os
 import threading
 import time
 from tkinter import messagebox
-import pandas as pd
 import FirebirdDB
 import datetime
 import Initialize
@@ -423,8 +420,8 @@ def main():
     root.iconbitmap(default='ConsumerComplaintIcon.ico')
     # Image for Consumer Complaint
     photo = PhotoImage(file='ConsumerComplaint.png')
-    #SignUpFrame(root,photo)
-    MainPage(root, photo)
+    SignUpFrame(root,photo)
+    #MainPage(root, photo)
     root.mainloop()
 
 main()
